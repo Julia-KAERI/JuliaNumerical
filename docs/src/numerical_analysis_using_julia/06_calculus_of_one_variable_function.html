@@ -310,9 +310,11 @@ window.Quarto = {
   <ul class="collapse">
   <li><a href="#편미분과-합성함수의-편미분" id="toc-편미분과-합성함수의-편미분" class="nav-link" data-scroll-target="#편미분과-합성함수의-편미분"><span class="header-section-number">2.1</span> 편미분과 합성함수의 편미분</a></li>
   <li><a href="#sec-derivative_calculation" id="toc-sec-derivative_calculation" class="nav-link" data-scroll-target="#sec-derivative_calculation"><span class="header-section-number">2.2</span> 컴퓨터를 이용한 미분 계산</a></li>
-  <li><a href="#자동-미분의-구현" id="toc-자동-미분의-구현" class="nav-link" data-scroll-target="#자동-미분의-구현"><span class="header-section-number">2.3</span> 자동 미분의 구현</a></li>
-  <li><a href="#전진법과-후진법" id="toc-전진법과-후진법" class="nav-link" data-scroll-target="#전진법과-후진법"><span class="header-section-number">2.4</span> 전진법과 후진법</a></li>
-  <li><a href="#forwarddiff.jl" id="toc-forwarddiff.jl" class="nav-link" data-scroll-target="#forwarddiff.jl"><span class="header-section-number">2.5</span> <code>ForwardDiff.jl</code></a></li>
+  <li><a href="#이원수-와-자동-미분" id="toc-이원수-와-자동-미분" class="nav-link" data-scroll-target="#이원수-와-자동-미분"><span class="header-section-number">2.3</span> 이원수 와 자동 미분</a></li>
+  <li><a href="#차원-변와-함수의-자동미분의-구현" id="toc-차원-변와-함수의-자동미분의-구현" class="nav-link" data-scroll-target="#차원-변와-함수의-자동미분의-구현"><span class="header-section-number">2.4</span> 1차원 변와 함수의 자동미분의 구현</a></li>
+  <li><a href="#다변수-함수에-대한-이원수-와-함수" id="toc-다변수-함수에-대한-이원수-와-함수" class="nav-link" data-scroll-target="#다변수-함수에-대한-이원수-와-함수"><span class="header-section-number">2.5</span> 다변수 함수에 대한 이원수 와 함수</a></li>
+  <li><a href="#전진법과-후진법" id="toc-전진법과-후진법" class="nav-link" data-scroll-target="#전진법과-후진법"><span class="header-section-number">2.6</span> 전진법과 후진법</a></li>
+  <li><a href="#forwarddiff.jl" id="toc-forwarddiff.jl" class="nav-link" data-scroll-target="#forwarddiff.jl"><span class="header-section-number">2.7</span> <code>ForwardDiff.jl</code></a></li>
   </ul></li>
   <li><a href="#일변수-함수의-적분-뉴턴-코츠-방법" id="toc-일변수-함수의-적분-뉴턴-코츠-방법" class="nav-link" data-scroll-target="#일변수-함수의-적분-뉴턴-코츠-방법"><span class="header-section-number">3</span> 일변수 함수의 적분 : 뉴턴-코츠 방법</a>
   <ul class="collapse">
@@ -574,87 +576,168 @@ Verma, Arun. 2000. <span>“An Introduction to Automatic Differentiation.”</sp
 <p>이를 극복할 수 있는 방법이 자동미분이다. 컴퓨터에서 사용하는 많은 함수는 그 도함수 역시 이런 함수들의 조합으로 표현 할 수 있다. 예를 들어 <span class="math inline">\(x^n\)</span> 이나 삼각함수, 지수-로그 함수 같은 경우이다. 그리고 함수간의 사칙연산과 합성에 대해 그 도함수는 간단한 규칙, 즉 chain rule 로 계산된다. 자동 미분은 그 함수값을 계산 할 때 미분값도 같이 계산한다. 크게 두가지 방법이 있는데 하나는 언어 자체에서 함수의 다형성을 제공할 경우(Julia 와 같이 함수 자체에서 제공하거나 C++/Python 과 같이클래스를 통해서 제공하거나) 이 다형성을 통해 구현할 수도 있고, 계산 코드를 읽어서 도함수를 계산하는 코드를 자동으로 생성하는 방법도 있다.</p>
 <p><br></p>
 </section>
-<section id="자동-미분의-구현" class="level3" data-number="2.3">
-<h3 data-number="2.3" class="anchored" data-anchor-id="자동-미분의-구현"><span class="header-section-number">2.3</span> 자동 미분의 구현</h3>
-<p><span class="math inline">\(C^1\)</span> 급 함수에 대해 테일러 전개의 <span class="math inline">\(1\)</span> 차항까지 반환하는 함수 <span class="math inline">\(\mathcal{D}\)</span> 를 생각하자. 즉,</p>
+<section id="이원수-와-자동-미분" class="level3" data-number="2.3">
+<h3 data-number="2.3" class="anchored" data-anchor-id="이원수-와-자동-미분"><span class="header-section-number">2.3</span> 이원수 와 자동 미분</h3>
+<section id="이원수-dual-number" class="level4">
+<h4 class="anchored" data-anchor-id="이원수-dual-number"><strong>이원수 (Dual number)</strong></h4>
+<p>실수 <span class="math inline">\(a\)</span> 에 대해 이원수 (dual number) <span class="math inline">\((a,\, \epsilon)_D\)</span> 은 <span class="math inline">\(a\)</span> 와 <span class="math inline">\(a\)</span> 값에 대한 오차 <span class="math inline">\(\epsilon\)</span> 을 의미하며 사칙연산을 포함한 연산에 대해 <span class="math inline">\(\epsilon\)</span> 에 대한 <span class="math inline">\(1\)</span> 차만을 허용한다. 즉 <span class="math inline">\(\epsilon^2 =0\)</span> 으로 간주한다. 그리고 다음 규칙을 따른다. <span id="eq-derivative_epsilon_rules"><span class="math display">\[
+\begin{aligned}
+c(a,\, \epsilon)_D &amp;= (ca,\, c\epsilon)_D, \\[0.3em]
+1/(a,\, \epsilon)_D &amp;= (1/a,\, -\epsilon/a^2)_D,\\[0.3em]
+(a,\, \epsilon_1)_D + (b,\,\epsilon_2)_D &amp;= (a+b,\, \epsilon_1+\epsilon_2)_D, \\[0.3em]
+(a,\, \epsilon_1)_D - (b,\,\epsilon_2)_D &amp;= (a-b,\, \epsilon_1-\epsilon_2)_D, \\[0.3em]
+(a,\, \epsilon_1)_D \times (b,\,\epsilon_2)_D &amp;= (ab,\, b\epsilon_1+a\epsilon_2)_D.
+\end{aligned}
+\tag{14}\]</span></span> 위 규칙은 함수 <span class="math inline">\(f(x)\)</span> 에 대한 <span class="math inline">\(x=a\)</span> 에서의 테일러 1차 전개 규칙과 동일하다. 예를 들어</p>
 <p><span class="math display">\[
-\mathcal{D}(f,\, a,\, \epsilon) = f(a) + f'(a)\epsilon
+f(a+h) \approx f(a)+f'(a)h,\qquad g(x+h) \approx g(a)+g'(a)h
 \]</span></p>
-<p><span class="math inline">\(f,\,g\in C^1,\, c\in \mathbb{R}\)</span> 에 대해</p>
+<p>에 대해 <span class="math inline">\(\epsilon_1 = f'(a)h,\, \epsilon_2=g'(a)h\)</span> 라 놓으면 <span class="math inline">\(f(a+h) = f(a)+\epsilon_1\)</span>, <span class="math inline">\(g(a+h)= g(a)+\epsilon_2\)</span> 이며</p>
+<p><span class="math display">\[
+(fg)(a+h) \approx (fg)(a) + f(a)g'(a)h + g(a)f'(a)h = f(a)g(a) + f(a)\epsilon_2 + g(a)\epsilon_1
+\]</span></p>
+<p>으로 <a href="#eq-derivative_epsilon_rules" class="quarto-xref">식&nbsp;14</a> 의 마지막 식과 동일하다.</p>
+<p><br></p>
+</section>
+<section id="미분가능한-함수와-이원수" class="level4">
+<h4 class="anchored" data-anchor-id="미분가능한-함수와-이원수"><strong>미분가능한 함수와 이원수</strong></h4>
+<p>이제 실수를 이원수 <span class="math inline">\((a,\, \epsilon)_D\)</span> 로 표현한다고 하자. 그리고 실수에 대한 함수 미분가능한 함수 <span class="math inline">\(f(x)\)</span> 는 실수, 혹은 이원수 입력에 대해 다음과 이원수를 다음과 같이 반환한다고 하자.</p>
 <p><span class="math display">\[
 \begin{aligned}
-\mathcal{D}(cf,\,a,\, \epsilon)&amp;= cf(a) + cf'(a) \epsilon,\\
-\mathcal{D}(f+g,\, a,\, \epsilon) &amp;= f(a)+g(a) + (f'(a)+g'(a))\epsilon, \\
-\mathcal{D}(f-g,\,a,\,\epsilon) &amp;= f(a)-g(a) + (f'(a)-g'(a))\epsilon,\\
-\mathcal{D}(fg,\,a,\,\epsilon) &amp;= f(a)g(a) + \left[f(a)g'(a) + f'(a)g(a)\right]\epsilon, \\
-\mathcal{D}\left(\dfrac{f}{g},\, a,\,\epsilon\right) &amp;= \dfrac{f(a)}{g(a)} + \dfrac{f'(a)g(a) - f(a)g'(a)}{g'(a))^2} \epsilon, \\
-\mathcal{D}(f\circ g,\,a,\,\epsilon) &amp;= f(g(a) + f'(g(a))g'(a))\epsilon.
+f((a,\, \epsilon)_D) &amp;= (f(a),\, \epsilon f'(a))_D, \\[0.3em]
+f(a) &amp;= f((a,\, 1)_D) = (f(a),\, f'(a))_D
 \end{aligned}
 \]</span></p>
+<p>이제 함수의 스칼라곱과 사칙 연산에 대해 함수에 대한 이원수 표현이 일관된다는 것을 아래와 같이 보일 수 있다.</p>
 <p><span class="math display">\[
 \begin{aligned}
-c(a,\, \epsilon_1) &amp;= (ca,\, c\epsilon_1), \\
-(a,\, \epsilon_1) + (b,\,\epsilon_2) &amp;= (a+b,\, \epsilon_1+\epsilon_2), \\
-(a,\, \epsilon_1) - (b,\,\epsilon_2) &amp;= (a-b,\, \epsilon_1-\epsilon_2), \\
-(a,\, \epsilon_1) \times (b,\,\epsilon_2) &amp;= (ab,\, b\epsilon_1+a\epsilon_2),
+c(f(a)) &amp;= c(f(a),\, f'(a))_D = (cf)(a), \\[0.3em]
+f(a) + g(a) &amp;= (f(a),\, f'(a)) + (g(a),\, g'(a))_D = (f(a)+g(a) ,\, f'(a)+g'(a))_D = (f+g)(a), \\[0.3em]
+f(a)g(a) &amp;= (f(a),\, f'(a)) \times (g(a),\, g'(a))_D = ((fg)(a),\, f'(a)g(a)+f(a)g'(a))_D = (fg)(a), \\[0.3em]
+f(a)/g(a) &amp;= \left(f(a),\, f'(a) \times (1/g(a),\, -g'(a)/(g(a))^2)\right)_D \\[0.3em]
+&amp; = \left((f/g)(a),\, (f'(a)g(a) - f(a)g'(a))/(g(a))^2\right)_D = (f/g)(a).  
 \end{aligned}
 \]</span></p>
-<p>이제 다형성을 이용하여 Julia 언어로 자동 미분을 구헌해 보자. 이것은 이해와 테스트 목적이며 실제 계산을 위한 것이 아니다. 일단 미분 가능함 함수, 즉 <span class="math inline">\(C^1\)</span> 급 함수 <span class="math inline">\(f:\mathbb{R}\to \mathbb{R}\)</span> 에 대해 함수 <span class="math inline">\(\mathcal{D}(f,\,a)=(f(a),\, f'(a))\)</span> 라고 하자. 그렇다면 <span class="math inline">\(f,\,g\in C^1,\, c\in\mathbb{R}\)</span> 에 대해</p>
-<p><span class="math display">\[
+<p>이제 함수의 합성에 대해 이원수 표현이 일관된다는 것을 보이자. 우선 이원수 표현이 함수 합성에 대해 일관되려면 아래와 같은 등식이 성립해야 한다.</p>
+<p><span id="eq-derivative_autodiff_composition_1"><span class="math display">\[
+(f\circ g)(a) = ((f\circ g)(a),\, (f\circ g)'(a))_D = ((f \circ g)(a),\,  (f\circ g)'(a))_D = ((f \circ g)(a),\,  f'(g(a))g'(a))_D
+\tag{15}\]</span></span></p>
+<p>실제로 성립하는 지 보자.</p>
+<p><span id="eq-derivative_autodiff_composition_2"><span class="math display">\[
 \begin{aligned}
-\overline{cf}(a,\, \epsilon)&amp;= (cf(a),\, cf'(a))\\
-\overline{f+g}(a,\, \epsilon) &amp;= (f(a)+g(a),\, f'(a)+g'(a)), \\
-\mathcal{D}(f-g,\,a) &amp;= (f(a)+g(a),\, f'(a)-g'(a)),\\
-\mathcal{D}(fg,\,a) &amp;= (f(a)g(a),\, f(a)g'(a) + f'(a)g(a)), \\
-\mathcal{D}(f/g,\, a) &amp;= (f(a)/g(a),\, (f'(a)g(a) - f(a)g'(a))/(g'(a))^2), \\
-\mathcal{D}(f\circ g,\,a) &amp;= (f(g(a)),\, f'(g(a))g'(a)).
+(f\circ g)(a) &amp;= f(g(a)) = f((g(a),\, g'(a))_D) = (f(g(a)),\, f'(g(a))g'(a))_D.
 \end{aligned}
-\]</span></p>
+\tag{16}\]</span></span></p>
+<p>즉 이원수를 도입하고, 이원수와 이원수에 대한 함수를 위와 같이 정의하면 함수의 사칙연산과 함성에 대한 연산을 수행 할 수 있다.</p>
+<p><br></p>
+</section>
+</section>
+<section id="차원-변와-함수의-자동미분의-구현" class="level3" data-number="2.4">
+<h3 data-number="2.4" class="anchored" data-anchor-id="차원-변와-함수의-자동미분의-구현"><span class="header-section-number">2.4</span> 1차원 변와 함수의 자동미분의 구현</h3>
+<p>아래의 julia 코드는 이원수와 이원수에 대한 몇몇 함수의 구현이다. 이원수는 <code>DNumber</code> 라는 복합 타입으로 구현되었으며 <code>v</code> 와 <code>e</code> 라는 멤버를 가지는데 각각 값과 <span class="math inline">\(\epsilon\)</span> 을 의미한다. 그리고 몇몇 중요 함수를 dispatch 하여 이원수에 대해 사용 가능하도록 하였다.</p>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
 <pre><strong>autodiff.jl</strong></pre>
 </div>
-<div class="sourceCode" id="cb1" data-filename="autodiff.jl"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> DNumber{T} </span>
+<div class="sourceCode" id="cb1" data-filename="autodiff.jl"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> DNumber{T<span class="op">&lt;:</span><span class="dt">Real</span>}</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    v<span class="op">::</span><span class="dt">T</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cn">e</span><span class="op">::</span><span class="dt">T</span></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">function</span> <span class="fu">DNumber</span>(v<span class="op">::</span><span class="dt">Real</span>, <span class="cn">e</span><span class="op">::</span><span class="dt">Union{Real, Nothing}</span>=<span class="cn">nothing</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">function</span> <span class="fu">DNumber</span>(v<span class="op">::</span><span class="dt">Real</span>, <span class="cn">e</span><span class="op">::</span><span class="dt">Union{Real, Nothing}</span>=<span class="cn">nothing</span>) </span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="cn">e</span> <span class="op">==</span> <span class="cn">nothing</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>            <span class="cn">e</span><span class="op">=</span><span class="fu">one</span>(v)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>            <span class="fu">new</span><span class="dt">{T}</span>(v, <span class="cn">e</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>            <span class="cn">e</span><span class="op">=</span><span class="fu">oneunit</span>(v)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>            <span class="fu">new</span><span class="dt">{typeof(v)}</span>(v, <span class="cn">e</span>)</span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>            T <span class="op">=</span> <span class="fu">promote_type</span>(<span class="fu">typeof</span>(v), <span class="fu">typeof</span>(<span class="cn">e</span>))</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            <span class="fu">new</span><span class="dt">{T}</span>(v, <span class="cn">e</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>            S <span class="op">=</span> <span class="fu">promote_type</span>(<span class="fu">typeof</span>(v), <span class="fu">typeof</span>(<span class="cn">e</span>))</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            <span class="fu">new</span><span class="dt">{S}</span>(v, <span class="cn">e</span>)</span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">end</span></span>
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">end</span></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">+</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x.v <span class="op">+</span> y.v, x.<span class="cn">e</span> <span class="op">+</span> y.<span class="cn">e</span>)</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">-</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x.v <span class="op">-</span> y.v, x.<span class="cn">e</span> <span class="op">-</span> y.<span class="cn">e</span>)</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">*</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x.v <span class="op">*</span> y.v, x.<span class="cn">e</span> <span class="op">*</span> y.v <span class="op">+</span> x.v <span class="op">*</span> y.<span class="cn">e</span>)</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:/</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x.v <span class="op">/</span> y.v, (x.<span class="cn">e</span> <span class="op">*</span> y.v <span class="op">-</span> x.v <span class="op">*</span> y.<span class="cn">e</span>) <span class="op">/</span> y.v<span class="op">^</span><span class="fl">2</span>)</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">-</span>(x<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(<span class="op">-</span>x.v, <span class="op">-</span>x.<span class="cn">e</span>)</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">+</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">Real</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x.v <span class="op">+</span> y, x.<span class="cn">e</span>)</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">+</span>(x<span class="op">::</span><span class="dt">Real</span>, y<span class="op">::</span><span class="dt">Real</span>) <span class="op">=</span> y<span class="op">+</span>x</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">-</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">Real</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x.v<span class="op">-</span>y, x.<span class="cn">e</span>)</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">-</span>(x<span class="op">::</span><span class="dt">Real</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">-</span>(y<span class="op">-</span>x)</span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">*</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">Number</span>) <span class="op">=</span> <span class="fu">x*DNumber</span>(y, <span class="fu">zero</span>(y))</span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">*</span>(x<span class="op">::</span><span class="dt">Number</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x, <span class="fu">zero</span>(x))<span class="op">*</span>y</span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:/</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">Number</span>) <span class="op">=</span> x<span class="op">/</span><span class="fu">DNumber</span>(y, <span class="fu">zero</span>(y))</span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:/</span>(x<span class="op">::</span><span class="dt">Number</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x, <span class="fu">zero</span>(x))<span class="op">/</span>y</span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:^</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">Real</span>) <span class="op">=</span> <span class="fu">DNumber</span>((x.v)<span class="op">^</span>y, <span class="fu">y*</span>((x.v)<span class="op">^</span>(y<span class="op">-</span><span class="fl">1</span>))<span class="op">*</span>x.<span class="cn">e</span>)</span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="bu">Base.sin</span>, <span class="bu">Base.cos</span>, <span class="bu">Base.tan</span>, <span class="bu">Base.exp</span>, <span class="bu">Base.log</span></span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="fu">sin</span>(x<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(<span class="fu">sin</span>(x.v), <span class="fu">cos</span>(x.v)<span class="op">*</span>x.<span class="cn">e</span>)</span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="fu">cos</span>(x<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(<span class="fu">cos</span>(x.v), <span class="fu">-sin</span>(x.v)<span class="op">*</span>x.<span class="cn">e</span>)  </span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="fu">tan</span>(x<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">sin</span>(x)<span class="op">/</span><span class="fu">cos</span>(x)</span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="fu">exp</span>(x<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(<span class="fu">exp</span>(x.v), <span class="fu">exp</span>(x.v)<span class="op">*</span>x.<span class="cn">e</span>)</span>
-<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="fu">log</span>(x<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(<span class="fu">log</span>(x.v), x.<span class="cn">e</span><span class="op">/</span>x.v)</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">function</span> <span class="fu">DNumber</span><span class="dt">{T}</span>(v<span class="op">::</span><span class="dt">Real</span>, <span class="cn">e</span><span class="op">::</span><span class="dt">Union{Real, Nothing}</span>=<span class="cn">nothing</span>) <span class="kw">where</span> T<span class="op">&lt;:</span><span class="dt">Union{Float16, Float32, Float64}</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="cn">e</span> <span class="op">==</span> <span class="cn">nothing</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>            <span class="fu">new</span><span class="dt">{T}</span>(<span class="fu">convert</span>(T, v), <span class="fu">one</span>(T))</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>            <span class="fu">new</span><span class="dt">{S}</span>(<span class="fu">convert</span>(T, v), <span class="cn">e</span>)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">end</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">end</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">end</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">+</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x.v <span class="op">+</span> y.v, x.<span class="cn">e</span> <span class="op">+</span> y.<span class="cn">e</span>)</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">-</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x.v <span class="op">-</span> y.v, x.<span class="cn">e</span> <span class="op">-</span> y.<span class="cn">e</span>)</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">*</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x.v <span class="op">*</span> y.v, x.<span class="cn">e</span> <span class="op">*</span> y.v <span class="op">+</span> x.v <span class="op">*</span> y.<span class="cn">e</span>)</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:/</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x.v <span class="op">/</span> y.v, (x.<span class="cn">e</span> <span class="op">*</span> y.v <span class="op">-</span> x.v <span class="op">*</span> y.<span class="cn">e</span>) <span class="op">/</span> y.v<span class="op">^</span><span class="fl">2</span>)</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">-</span>(x<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(<span class="op">-</span>x.v, <span class="op">-</span>x.<span class="cn">e</span>)</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">+</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">Real</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x.v <span class="op">+</span> y, x.<span class="cn">e</span>)</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">+</span>(x<span class="op">::</span><span class="dt">Real</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> y<span class="op">+</span>x</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">-</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">Real</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x.v<span class="op">-</span>y, x.<span class="cn">e</span>)</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">-</span>(x<span class="op">::</span><span class="dt">Real</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">-</span>(y<span class="op">-</span>x)</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">*</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">Number</span>) <span class="op">=</span> <span class="fu">x*DNumber</span>(y, <span class="fu">zero</span>(y))</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:</span><span class="fu">*</span>(x<span class="op">::</span><span class="dt">Number</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x, <span class="fu">zero</span>(x))<span class="op">*</span>y</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:/</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">Number</span>) <span class="op">=</span> x<span class="op">/</span><span class="fu">DNumber</span>(y, <span class="fu">zero</span>(y))</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:/</span>(x<span class="op">::</span><span class="dt">Number</span>, y<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(x, <span class="fu">zero</span>(x))<span class="op">/</span>y</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="bu">Base</span>.<span class="op">:^</span>(x<span class="op">::</span><span class="dt">DNumber</span>, y<span class="op">::</span><span class="dt">Real</span>) <span class="op">=</span> <span class="fu">DNumber</span>((x.v)<span class="op">^</span>y, <span class="fu">y*</span>((x.v)<span class="op">^</span>(y<span class="op">-</span><span class="fl">1</span>))<span class="op">*</span>x.<span class="cn">e</span>)</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="bu">Base.sin</span>, <span class="bu">Base.cos</span>, <span class="bu">Base.tan</span>, <span class="bu">Base.exp</span>, <span class="bu">Base.log</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="fu">sin</span>(x<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(<span class="fu">sin</span>(x.v), <span class="fu">cos</span>(x.v)<span class="op">*</span>x.<span class="cn">e</span>)</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a><span class="fu">cos</span>(x<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(<span class="fu">cos</span>(x.v), <span class="fu">-sin</span>(x.v)<span class="op">*</span>x.<span class="cn">e</span>)  </span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="fu">tan</span>(x<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">sin</span>(x)<span class="op">/</span><span class="fu">cos</span>(x)</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a><span class="fu">exp</span>(x<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(<span class="fu">exp</span>(x.v), <span class="fu">exp</span>(x.v)<span class="op">*</span>x.<span class="cn">e</span>)</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="fu">log</span>(x<span class="op">::</span><span class="dt">DNumber</span>) <span class="op">=</span> <span class="fu">DNumber</span>(<span class="fu">log</span>(x.v), x.<span class="cn">e</span><span class="op">/</span>x.v)</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">deriv</span>(f<span class="op">::</span><span class="dt">Function</span>, x<span class="op">::</span><span class="dt">Real</span>)</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>    <span class="fu">f</span>(<span class="fu">DNumber</span>(x)).<span class="cn">e</span></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p><br></p>
+<p>이제 확인해 보자.</p>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>REPL In</strong></pre>
+</div>
+<div class="sourceCode" id="cb2" data-filename="REPL In"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">DNumber</span><span class="dt">{Float64}</span>(<span class="fl">3.0f0</span>)</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>REPL Out</strong></pre>
+</div>
+<div class="sourceCode" id="cb3" data-filename="REPL Out"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">DNumber</span><span class="dt">{Float64}</span>(<span class="fl">3.0</span>, <span class="fl">1.0</span>)</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><br></p>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>REPL In</strong></pre>
+</div>
+<div class="sourceCode" id="cb4" data-filename="REPL In"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">f</span>(x) <span class="op">=</span> x<span class="op">^</span><span class="fl">2</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">g</span>(x) <span class="op">=</span> <span class="fl">2</span><span class="op">*</span>x</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">deriv</span>(g<span class="op">∘</span>f, <span class="fl">1</span>)</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>REPL Out</strong></pre>
+</div>
+<div class="sourceCode" id="cb5" data-filename="REPL Out"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fl">4</span></span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><br></p>
+<p>위의 코드는 자동 미분이 이루어지는 방식을 설명하기 위한 것이며 앞으로 사용하지 않는다.</p>
+<p><br></p>
 </section>
-<section id="전진법과-후진법" class="level3" data-number="2.4">
-<h3 data-number="2.4" class="anchored" data-anchor-id="전진법과-후진법"><span class="header-section-number">2.4</span> 전진법과 후진법</h3>
+<section id="다변수-함수에-대한-이원수-와-함수" class="level3" data-number="2.5">
+<h3 data-number="2.5" class="anchored" data-anchor-id="다변수-함수에-대한-이원수-와-함수"><span class="header-section-number">2.5</span> 다변수 함수에 대한 이원수 와 함수</h3>
+<p><span class="math inline">\(f:\mathbb{R}^n \to \mathbb{R}\)</span> 을 다룰 경우 <span class="math inline">\((\boldsymbol{x},\, \boldsymbol{\epsilon})_D\)</span> 에 대해 스칼라곱과 합, 그리고 함수에 대한 값을 다음과 같이 정의한다.</p>
+<p><span class="math display">\[
+\begin{aligned}
+c(\boldsymbol{x},\, \boldsymbol{\epsilon})_D &amp;= (c\boldsymbol{x},\, c\boldsymbol{\epsilon})_D, \\[0.3em]
+(\boldsymbol{x},\, \boldsymbol{\epsilon})_D + (\boldsymbol{y},\, \boldsymbol{\delta})_D &amp;= (\boldsymbol{x}+\boldsymbol{y},\, \boldsymbol{\epsilon}+ \boldsymbol{\delta})_D, \\[0.3em]
+\end{aligned}
+\]</span></p>
+<p><span class="math display">\[
+f((\boldsymbol{a},\, \boldsymbol{\epsilon})_D) = (f(\boldsymbol{a}),\,  \nabla f(\boldsymbol{a})\boldsymbol{\cdot \epsilon})_D
+\]</span></p>
+<p><br></p>
+</section>
+<section id="전진법과-후진법" class="level3" data-number="2.6">
+<h3 data-number="2.6" class="anchored" data-anchor-id="전진법과-후진법"><span class="header-section-number">2.6</span> 전진법과 후진법</h3>
 <p>자동 미분의 chain rule 을 구현하는 방법에는 전진법(forwared AD)과 후진법(backward AD) 이 있다. (참고로 전진법, 후진법은 앞서 수치해석적 미분에서의 전방차분, 후방차분과는 아무 관계 없다.)</p>
 <section id="전진법" class="level4">
 <h4 class="anchored" data-anchor-id="전진법"><strong>전진법</strong></h4>
@@ -665,7 +748,7 @@ c(a,\, \epsilon_1) &amp;= (ca,\, c\epsilon_1), \\
 &amp;=\sum_{k_{1}} \cdots \sum_{k_{m-1}}  \dfrac{\partial z_i^{(m)}(\boldsymbol{z}^{(m-1)})}{\partial z^{(m)}_{k_{m-1}}} \dfrac{\partial z_{k_{m-1}}^{(m-1)}(\boldsymbol{z}^{(m-2)})}{\partial z^{(m-2)}_{k_{m-2}}} \cdots \dfrac{\partial z_{k_1}^{(1)}(\boldsymbol{a})}{\partial x_j} \\[0.3em]\\
 &amp;= \left[\boldsymbol{J}_{F^{(m)}}(\boldsymbol{z}^{(m-1)}) \cdots \boldsymbol{J}_{F^{(1)}}(\boldsymbol{a})\right]_{ij}
 \end{aligned}
-\tag{14}\]</span></span></p>
+\tag{17}\]</span></span></p>
 <p><br></p>
 </section>
 <section id="후진법" class="level4">
@@ -677,18 +760,18 @@ c(a,\, \epsilon_1) &amp;= (ca,\, c\epsilon_1), \\
 &amp;=\sum_{k_{N-1}} \cdots\sum_{k_{m+1}} \dfrac{\partial z^{(m+1)}_{k_{m+1}}(\boldsymbol{z}^{m})}{\partial z^{(m)}_i} \cdots  \dfrac{\partial z^{(N-1)}_{k_{N-1}}(\boldsymbol{z}^{(N-2)})}{\partial z^{(N-2)}_{k_{N-2}}}\dfrac{\partial y_j(\boldsymbol{z}^{(N-1)})}{\partial z^{(N-1)}_{k_{N-1}}} \\[0.3em]
 &amp;= \left[\boldsymbol{J}_{F^{(m+1)}}(\boldsymbol{z}^m)^T \cdots \boldsymbol{J}_{F^{(N-1)}}(\boldsymbol{z}^{(N)})^T \right]_{ij}
 \end{aligned}
-\tag{15}\]</span></span></p>
+\tag{18}\]</span></span></p>
 <p><span class="math inline">\(m=(N-1)\)</span>, 즉 <span class="math inline">\(\dfrac{\partial y_j(\boldsymbol{z}^{(N-1)})}{\partial z^{(N-1)}_{k_N}}\)</span> 부터 계산한다. <span class="math inline">\(m=N-2,\,N-3,\ldots,\,1\)</span> 까지 감소시키면 <span class="math inline">\(\boldsymbol{J}_F\)</span> 를 계산 할 수 있다… 고 쉽게 넘어 갈 수 있지만 우리는 아직 <span class="math inline">\(\boldsymbol{z}^{(m)}= F^{(m)}\circ \cdots \circ F^{(1)}(\boldsymbol{a})\)</span> 를 계산하지 않았다는 것을 기억하라. 후진법은 전진법과는 달리 두가지 과정으로 수행된다.</p>
 <p> (<span class="math inline">\(1\)</span>) 일단 <span class="math inline">\(\boldsymbol{z}^{(1)}=F^{(1)}(\boldsymbol{a})\)</span> 부터 <span class="math inline">\(\boldsymbol{y} = F(\boldsymbol{a})= F^{N}\circ \cdots F^{(1)}(\boldsymbol{a})\)</span> 까지 계산하며 이 값을 기억한다.</p>
 <p> (<span class="math inline">\(2\)</span>) (<span class="math inline">\(1\)</span>) 에서 기억한 값을 이용하여 <span class="math inline">\(m=N-1\)</span> 부터 <span class="math inline">\(m=1\)</span> 까지의 편미분을 계산한다.</p>
-<p>즉 후진법은 전진하면서 함수값을 계산하고 후진하면서 앞서 계산한 함수값을 이용하여 편미분을 계산한다. 일반적으로 <span class="math inline">\(F:\mathbb{R}^n \to \mathbb{R}^m\)</span> 에 대해 <span class="math inline">\(m&gt;n\)</span> 이면 전진법이 유리하며 <span class="math inline">\(n&gt;m\)</span> 이면 후진법이 유리하다는 것이 잘 알려져 있으며 <span class="math inline">\(n\)</span> 이 <span class="math inline">\(m\)</span> 보다 더 클수록 더 유리하다는 것이 알려져 있다. 신경망과 같은 기계학습이 전형적으로 이런 경우이므로 기계학습에서는 거의 후진법이 사용된다.</p>
+<p>즉 후진법은 전진하면서 함수값을 계산하고 후진하면서 앞서 계산한 함수값을 이용하여 편미분을 계산한다. 일반적으로 <span class="math inline">\(F:\mathbb{R}^n \to \mathbb{R}^m\)</span> 에 대해 <span class="math inline">\(m&gt;n\)</span> 이면 전진법이 유리하며 <span class="math inline">\(n&gt;m\)</span> 이면 후진법이 유리하다는 것이 잘 알려져 있으며 <span class="math inline">\(n\)</span> 이 <span class="math inline">\(m\)</span> 보다 더 클수록 더 유리하다는 것이 알려져 있다. 인공신경망에서의 오차함수 계산이 전형적으로 이런 경우이며 따라서 인공신경망에서의 backpropagation 에서는 후진법이 사용된다.</p>
 <p><br></p>
 <p>Julia 에서의 미분 관련 패키지에 대해서는 <a href="https://juliadiff.org/#computing_derivatives">JuliaDiff</a> 를 참고하라. 앞으로는 자동 미분을 사용 할 수 있을경우, 전진법에는 <code>ForwardDiff.jl</code> 을, 후진법에는 <code>ReverseDiff.jl</code> 을 사용하도록 한다.</p>
 <p><br></p>
 </section>
 </section>
-<section id="forwarddiff.jl" class="level3" data-number="2.5">
-<h3 data-number="2.5" class="anchored" data-anchor-id="forwarddiff.jl"><span class="header-section-number">2.5</span> <code>ForwardDiff.jl</code></h3>
+<section id="forwarddiff.jl" class="level3" data-number="2.7">
+<h3 data-number="2.7" class="anchored" data-anchor-id="forwarddiff.jl"><span class="header-section-number">2.7</span> <code>ForwardDiff.jl</code></h3>
 <ul>
 <li><a href="https://juliadiff.org/ForwardDiff.jl/stable/user/api/"><code>ForwardDiff.jl</code> 공식 웹페이지</a> 를 항상 참고하라.</li>
 </ul>
@@ -697,14 +780,14 @@ c(a,\, \epsilon_1) &amp;= (ca,\, c\epsilon_1), \\
 <div class="code-with-filename-file">
 <pre><strong>REPL In</strong></pre>
 </div>
-<div class="sourceCode" id="cb2" data-filename="REPL In"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">f</span>(x<span class="op">::</span><span class="dt">Real</span>) <span class="op">=</span> <span class="fu">x*sin</span>(x)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>ForwardDiff.<span class="fu">derivative</span>(f, <span class="cn">π</span>)</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6" data-filename="REPL In"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">f</span>(x<span class="op">::</span><span class="dt">Real</span>) <span class="op">=</span> <span class="fu">x*sin</span>(x)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>ForwardDiff.<span class="fu">derivative</span>(f, <span class="cn">π</span>)</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
 <pre><strong>REPL Out</strong></pre>
 </div>
-<div class="sourceCode" id="cb3" data-filename="REPL Out"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>-3.141592653589793</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb7" data-filename="REPL Out"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>-3.141592653589793</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p><br></p>
 <p><span class="math inline">\(g(\boldsymbol{x}) = x_1 + 2x_2\)</span> 에 대한 <span class="math inline">\(\nabla g(1.0, 1.0)\)</span> 은 다음과 같이 계산한다.</p>
@@ -712,33 +795,50 @@ c(a,\, \epsilon_1) &amp;= (ca,\, c\epsilon_1), \\
 <div class="code-with-filename-file">
 <pre><strong>REPL In</strong></pre>
 </div>
-<div class="sourceCode" id="cb4" data-filename="REPL In"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">g</span>(x<span class="op">::</span><span class="dt">Vector</span>) <span class="op">=</span> x[<span class="fl">1</span>]<span class="op">+</span> <span class="fl">2</span><span class="op">*</span>x[<span class="fl">2</span>]</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>ForwardDiff.<span class="fu">gradient</span>(g, [<span class="fl">1.0</span>, <span class="fl">1.0</span>])</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb8" data-filename="REPL In"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">g</span>(x<span class="op">::</span><span class="dt">Vector</span>) <span class="op">=</span> x[<span class="fl">1</span>]<span class="op">+</span> <span class="fl">2</span><span class="op">*</span>x[<span class="fl">2</span>]</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>ForwardDiff.<span class="fu">gradient</span>(g, [<span class="fl">1.0</span>, <span class="fl">1.0</span>])</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
 <pre><strong>REPL Out</strong></pre>
 </div>
-<div class="sourceCode" id="cb5" data-filename="REPL Out"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>2-element Vector{Float64}:</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a> 1.0</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a> 2.0</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb9" data-filename="REPL Out"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>2-element Vector{Float64}:</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a> 1.0</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a> 2.0</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p><br></p>
-<p><span class="math inline">\(H(\boldsymbol{x})= \begin{bmatrix} x_1 x_2 * x_1 + x_2\end{bmatrix}^T\)</span> 에 대한 <span class="math inline">\(\boldsymbol{J}_H(1.0, 2.0)\)</span> 은 다음과 같이 계산한다.</p>
+<p><span class="math inline">\(H(\boldsymbol{x})= \begin{bmatrix} x_1 x_2 \\ x_1 + x_2\end{bmatrix}\)</span> 에 대한 <span class="math inline">\(\boldsymbol{J}_H(1.0, 2.0)\)</span> 은 다음과 같이 계산한다.</p>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
 <pre><strong>REPL In</strong></pre>
 </div>
-<div class="sourceCode" id="cb6" data-filename="REPL In"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">H</span>(x<span class="op">::</span><span class="dt">Vector</span>) <span class="op">=</span> [x[<span class="fl">1</span>]<span class="op">*</span>x[<span class="fl">2</span>], x[<span class="fl">1</span>]<span class="op">+</span>x[<span class="fl">2</span>]]</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>ForwardDiff.<span class="fu">jacobian</span>(H, [<span class="fl">1.0</span>, <span class="fl">2.0</span>])</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb10" data-filename="REPL In"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">H</span>(x<span class="op">::</span><span class="dt">Vector</span>) <span class="op">=</span> [x[<span class="fl">1</span>]<span class="op">*</span>x[<span class="fl">2</span>], x[<span class="fl">1</span>]<span class="op">+</span>x[<span class="fl">2</span>]]</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>ForwardDiff.<span class="fu">jacobian</span>(H, [<span class="fl">1.0</span>, <span class="fl">2.0</span>])</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
 <pre><strong>REPL Out</strong></pre>
 </div>
-<div class="sourceCode" id="cb7" data-filename="REPL Out"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>2×2 Matrix{Float64}:</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a> 2.0  1.0</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a> 1.0  1.0</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb11" data-filename="REPL Out"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>2×2 Matrix{Float64}:</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a> 2.0  1.0</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a> 1.0  1.0</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><br></p>
+<p><span class="math inline">\(f(\boldsymbol{x})=x_1 \sin (\pi x_2) + 2x_2^3\)</span> 에 대한 헤시안 <span class="math inline">\(\boldsymbol{H}_f(1,1)\)</span> 은 다음과 같이 계산한다.</p>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>REPL In</strong></pre>
+</div>
+<div class="sourceCode" id="cb12" data-filename="REPL In"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">h</span>(x<span class="op">::</span><span class="dt">Vector</span>)<span class="op">=</span>x[<span class="fl">1</span>]<span class="fu">*sin</span>(<span class="cn">π</span><span class="op">*</span>x[<span class="fl">2</span>]) <span class="op">+</span> <span class="fl">2</span><span class="op">*</span>x[<span class="fl">2</span>]<span class="op">^</span><span class="fl">3</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>ForwardDiff.<span class="fu">hessian</span>(h, [<span class="fl">1</span>, <span class="fl">1</span>])</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>REPL Out</strong></pre>
+</div>
+<div class="sourceCode" id="cb13" data-filename="REPL Out"><pre class="sourceCode txt code-with-copy"><code class="sourceCode default"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>2×2 Matrix{Float64}:</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  0.0      -3.14159</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a> -3.14159  12.0</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p><br></p>
 </section>
@@ -826,11 +926,11 @@ f(x) = \tilde{f}(x) + \dfrac{f^{(2)}(\xi_k)}{2}(x-x_{k-1})(x-x_k).\\
 <p>를 얻는다. 사다리꼴 방법에 의한 적분값 <span class="math inline">\(I_T\)</span> 는</p>
 <p><span id="eq-trapzoidal_value"><span class="math display">\[
 I_T[f, a, b, n] = \dfrac{h}{2}\left(f(x_1)+ f(x_n) + \sum_{k=2}^{n-1} f(x_k)\right)
-\tag{16}\]</span></span></p>
+\tag{19}\]</span></span></p>
 <p>이다. 이제 적분의 오차를 알아보자. <span class="math inline">\(f^{(2)}(x)\)</span> 가 연속이므로 <span class="math inline">\(\displaystyle \dfrac{1}{n-1}\sum_{k=1}^{n-1} f^{(2)}(\xi_k)= f^{(2)}(\xi)\)</span> 를 만족하는 <span class="math inline">\(\xi\in [a,\,b]\)</span> 가 존재하며<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a> 따라서 사다리꼴 방법에 의한 적분에 대한 에러 <span class="math inline">\(E_T\)</span> 는</p>
 <p><span id="eq-trapzoidal_error"><span class="math display">\[
 E_T[f, a, b, n] = \dfrac{h^3}{12}(n-1)f^{(2)}(\xi) = \dfrac{(b-a)f^{(2)}(\xi)}{12}h^2 = O(h^2)
-\tag{17}\]</span></span></p>
+\tag{20}\]</span></span></p>
 <p>이다.</p>
 <p><br></p>
 </section>
@@ -873,7 +973,7 @@ f''(x) =  \dfrac{f(x+h) - 2f(x) + f(x-h)}{h^2} - \dfrac{f^{(4)}(\xi_k')}{36}h^5
 \]</span></p>
 <p>따라서 Simpson 1/3 적분값은 다음과 같다. <span id="eq-simpson_1_3_value"><span class="math display">\[
 \mathcal{I}_{1/3}[f,\,a,\,b,\, 2n+1] = \dfrac{h}{3} \left[f(x_1) + f(x_{2m+1}) + 4\left(\sum_{k=1}^m  f(x_{2k})\right) + 2\left(\sum_{k=1}^{m-1} f(x_{2k+1})\right)\right]
-\tag{18}\]</span></span></p>
+\tag{21}\]</span></span></p>
 <p><br></p>
 </section>
 <section id="simpson-38-적분" class="level3" data-number="3.5">
@@ -901,7 +1001,7 @@ f(x) = L_4 (x) + \dfrac{f^{(4)}(\xi_i)}{4!}\prod_{j=1}^4(x-x_{j-2})
 <p>를 만족하는 <span class="math inline">\(\xi \in [a,\,b]\)</span> 가 존재한다. 여기서</p>
 <p><span id="eq-simpson_3_8_value"><span class="math display">\[
 \mathcal{I}_{3/8}[f,\,a,\,b,\, 3m+1]=\dfrac{3h}{8} \left[f(x_1) + f(x_{3m+1}) + 3\sum_{i=0}^{m-1} \left(f(x_{3i+2}) +f(x_{3i+3})\right) +  + 2\sum_{i=1}^{m-1} f(x_{3i+1})\right]
-\tag{19}\]</span></span></p>
+\tag{22}\]</span></span></p>
 <p>는 Simpson 3/8 적분값이며 그 오차는 <span class="math inline">\(- \dfrac{3m}{80}f^{(4)} (\xi) h^5\)</span> 이다.</p>
 <!-- [^2]: 일변수 함수 $f$ 가 닫힌 구간 $[a,\,b]$ 에서 연속이면 최대값과 최소값이 항상 존재한다는 것은 아주 중요한 수학적 사실이다. -->
 <p><br></p>
@@ -912,56 +1012,56 @@ f(x) = L_4 (x) + \dfrac{f^{(4)}(\xi_i)}{4!}\prod_{j=1}^4(x-x_{j-2})
 <figcaption>수치 적분</figcaption>
 </figure>
 </div>
-<div class="sourceCode" id="cb8"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb8-1"><a href="#cb8-1"></a><span class="kw">function</span> <span class="fu">integrate_trapzoidal</span>(</span>
-<span id="cb8-2"><a href="#cb8-2"></a>    f<span class="op">::</span><span class="dt">Function</span>, </span>
-<span id="cb8-3"><a href="#cb8-3"></a>    a<span class="op">::</span><span class="dt">Number</span>, </span>
-<span id="cb8-4"><a href="#cb8-4"></a>    b<span class="op">::</span><span class="dt">Number</span>, </span>
-<span id="cb8-5"><a href="#cb8-5"></a>    n<span class="op">::</span><span class="dt">Integer</span>)</span>
-<span id="cb8-6"><a href="#cb8-6"></a>    </span>
-<span id="cb8-7"><a href="#cb8-7"></a>    a, b <span class="op">=</span> <span class="fu">minmax</span>(a, b)</span>
-<span id="cb8-8"><a href="#cb8-8"></a>    h <span class="op">=</span> (b<span class="op">-</span>a)<span class="op">/</span>(n<span class="op">-</span><span class="fl">1</span>)</span>
-<span id="cb8-9"><a href="#cb8-9"></a>    x <span class="op">=</span> <span class="fu">range</span>(a, b, length <span class="op">=</span> n)</span>
-<span id="cb8-10"><a href="#cb8-10"></a>    ff <span class="op">=</span> <span class="fu">f</span>.(x)</span>
-<span id="cb8-11"><a href="#cb8-11"></a>    result <span class="op">=</span> <span class="fl">0.5</span><span class="fu">*</span>(ff[<span class="fl">1</span>]<span class="op">+</span>ff[<span class="kw">end</span>])</span>
-<span id="cb8-12"><a href="#cb8-12"></a>    result <span class="op">+=</span> <span class="fu">sum</span>(ff[<span class="fl">2</span><span class="op">:</span><span class="kw">end</span><span class="op">-</span><span class="fl">1</span>])</span>
-<span id="cb8-13"><a href="#cb8-13"></a>    <span class="cf">return</span> result<span class="op">*</span>h</span>
-<span id="cb8-14"><a href="#cb8-14"></a><span class="kw">end</span></span>
-<span id="cb8-15"><a href="#cb8-15"></a></span>
-<span id="cb8-16"><a href="#cb8-16"></a><span class="kw">function</span> <span class="fu">integrate_simpson_1_3</span>(</span>
-<span id="cb8-17"><a href="#cb8-17"></a>    f<span class="op">::</span><span class="dt">Function</span>, </span>
-<span id="cb8-18"><a href="#cb8-18"></a>    a<span class="op">::</span><span class="dt">Number</span>, </span>
-<span id="cb8-19"><a href="#cb8-19"></a>    b<span class="op">::</span><span class="dt">Number</span>, </span>
-<span id="cb8-20"><a href="#cb8-20"></a>    n<span class="op">::</span><span class="dt">Integer</span>)</span>
-<span id="cb8-21"><a href="#cb8-21"></a>    </span>
-<span id="cb8-22"><a href="#cb8-22"></a>    <span class="pp">@assert</span> n <span class="op">%</span><span class="fl">2</span> <span class="op">==</span> <span class="fl">1</span></span>
-<span id="cb8-23"><a href="#cb8-23"></a>    a, b <span class="op">=</span> <span class="fu">minmax</span>(a, b)</span>
-<span id="cb8-24"><a href="#cb8-24"></a>    h <span class="op">=</span> (b<span class="op">-</span>a)<span class="op">/</span>(n<span class="op">-</span><span class="fl">1</span>)</span>
-<span id="cb8-25"><a href="#cb8-25"></a>    x <span class="op">=</span> <span class="fu">range</span>(a, b, length <span class="op">=</span> n)</span>
-<span id="cb8-26"><a href="#cb8-26"></a>    ff <span class="op">=</span> <span class="fu">f</span>.(x)</span>
-<span id="cb8-27"><a href="#cb8-27"></a>    result <span class="op">=</span> (ff[<span class="fl">1</span>]<span class="op">+</span>ff[<span class="kw">end</span>])</span>
-<span id="cb8-28"><a href="#cb8-28"></a>    result <span class="op">+=</span> <span class="fl">4</span><span class="fu">*sum</span>(ff[<span class="fl">2</span><span class="op">:</span><span class="fl">2</span><span class="op">:</span><span class="kw">end</span><span class="op">-</span><span class="fl">1</span>])</span>
-<span id="cb8-29"><a href="#cb8-29"></a>    result <span class="op">+=</span> <span class="fl">2</span><span class="fu">*sum</span>(ff[<span class="fl">3</span><span class="op">:</span><span class="fl">2</span><span class="op">:</span><span class="kw">end</span><span class="op">-</span><span class="fl">2</span>])</span>
-<span id="cb8-30"><a href="#cb8-30"></a>    <span class="cf">return</span> result <span class="op">*</span> h<span class="op">/</span><span class="fl">3</span></span>
-<span id="cb8-31"><a href="#cb8-31"></a><span class="kw">end</span></span>
-<span id="cb8-32"><a href="#cb8-32"></a></span>
-<span id="cb8-33"><a href="#cb8-33"></a><span class="kw">function</span> <span class="fu">integrate_simpson_3_8</span>(</span>
-<span id="cb8-34"><a href="#cb8-34"></a>    f<span class="op">::</span><span class="dt">Function</span>, </span>
-<span id="cb8-35"><a href="#cb8-35"></a>    a<span class="op">::</span><span class="dt">Number</span>, </span>
-<span id="cb8-36"><a href="#cb8-36"></a>    b<span class="op">::</span><span class="dt">Number</span>, </span>
-<span id="cb8-37"><a href="#cb8-37"></a>    n<span class="op">::</span><span class="dt">Integer</span>)</span>
-<span id="cb8-38"><a href="#cb8-38"></a>    </span>
-<span id="cb8-39"><a href="#cb8-39"></a>    <span class="pp">@assert</span> n <span class="op">%</span><span class="fl">3</span> <span class="op">==</span> <span class="fl">1</span></span>
-<span id="cb8-40"><a href="#cb8-40"></a>    a, b <span class="op">=</span> <span class="fu">minmax</span>(a, b)</span>
-<span id="cb8-41"><a href="#cb8-41"></a>    h <span class="op">=</span> (b<span class="op">-</span>a)<span class="op">/</span>(n<span class="op">-</span><span class="fl">1</span>)</span>
-<span id="cb8-42"><a href="#cb8-42"></a>    x <span class="op">=</span> <span class="fu">range</span>(a, b, length <span class="op">=</span> n)</span>
-<span id="cb8-43"><a href="#cb8-43"></a>    <span class="fu">println</span>(<span class="st">"h=</span><span class="sc">$</span>h<span class="st">, dx=</span><span class="sc">$</span>(x[<span class="fl">10</span>]<span class="op">-</span>x[<span class="fl">9</span>])<span class="st">"</span>)</span>
-<span id="cb8-44"><a href="#cb8-44"></a>    ff <span class="op">=</span> <span class="fu">f</span>.(x)</span>
-<span id="cb8-45"><a href="#cb8-45"></a>    result <span class="op">=</span> (ff[<span class="fl">1</span>]<span class="op">+</span>ff[<span class="kw">end</span>])</span>
-<span id="cb8-46"><a href="#cb8-46"></a>    result <span class="op">+=</span> <span class="fl">3</span><span class="fu">*sum</span>(ff[<span class="fl">2</span><span class="op">:</span><span class="fl">3</span><span class="op">:</span><span class="kw">end</span><span class="op">-</span><span class="fl">2</span>])</span>
-<span id="cb8-47"><a href="#cb8-47"></a>    result <span class="op">+=</span> <span class="fl">3</span><span class="fu">*sum</span>(ff[<span class="fl">3</span><span class="op">:</span><span class="fl">3</span><span class="op">:</span><span class="kw">end</span><span class="op">-</span><span class="fl">1</span>])</span>
-<span id="cb8-48"><a href="#cb8-48"></a>    result <span class="op">+=</span> <span class="fl">2</span><span class="fu">*sum</span>(ff[<span class="fl">4</span><span class="op">:</span><span class="fl">3</span><span class="op">:</span><span class="kw">end</span><span class="op">-</span><span class="fl">3</span>])</span>
-<span id="cb8-49"><a href="#cb8-49"></a>    <span class="cf">return</span> result <span class="op">*</span> h <span class="op">*</span> <span class="fl">3</span> <span class="op">/</span> <span class="fl">8</span></span>
-<span id="cb8-50"><a href="#cb8-50"></a><span class="kw">end</span></span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb14-1"><a href="#cb14-1"></a><span class="kw">function</span> <span class="fu">integrate_trapzoidal</span>(</span>
+<span id="cb14-2"><a href="#cb14-2"></a>    f<span class="op">::</span><span class="dt">Function</span>, </span>
+<span id="cb14-3"><a href="#cb14-3"></a>    a<span class="op">::</span><span class="dt">Number</span>, </span>
+<span id="cb14-4"><a href="#cb14-4"></a>    b<span class="op">::</span><span class="dt">Number</span>, </span>
+<span id="cb14-5"><a href="#cb14-5"></a>    n<span class="op">::</span><span class="dt">Integer</span>)</span>
+<span id="cb14-6"><a href="#cb14-6"></a>    </span>
+<span id="cb14-7"><a href="#cb14-7"></a>    a, b <span class="op">=</span> <span class="fu">minmax</span>(a, b)</span>
+<span id="cb14-8"><a href="#cb14-8"></a>    h <span class="op">=</span> (b<span class="op">-</span>a)<span class="op">/</span>(n<span class="op">-</span><span class="fl">1</span>)</span>
+<span id="cb14-9"><a href="#cb14-9"></a>    x <span class="op">=</span> <span class="fu">range</span>(a, b, length <span class="op">=</span> n)</span>
+<span id="cb14-10"><a href="#cb14-10"></a>    ff <span class="op">=</span> <span class="fu">f</span>.(x)</span>
+<span id="cb14-11"><a href="#cb14-11"></a>    result <span class="op">=</span> <span class="fl">0.5</span><span class="fu">*</span>(ff[<span class="fl">1</span>]<span class="op">+</span>ff[<span class="kw">end</span>])</span>
+<span id="cb14-12"><a href="#cb14-12"></a>    result <span class="op">+=</span> <span class="fu">sum</span>(ff[<span class="fl">2</span><span class="op">:</span><span class="kw">end</span><span class="op">-</span><span class="fl">1</span>])</span>
+<span id="cb14-13"><a href="#cb14-13"></a>    <span class="cf">return</span> result<span class="op">*</span>h</span>
+<span id="cb14-14"><a href="#cb14-14"></a><span class="kw">end</span></span>
+<span id="cb14-15"><a href="#cb14-15"></a></span>
+<span id="cb14-16"><a href="#cb14-16"></a><span class="kw">function</span> <span class="fu">integrate_simpson_1_3</span>(</span>
+<span id="cb14-17"><a href="#cb14-17"></a>    f<span class="op">::</span><span class="dt">Function</span>, </span>
+<span id="cb14-18"><a href="#cb14-18"></a>    a<span class="op">::</span><span class="dt">Number</span>, </span>
+<span id="cb14-19"><a href="#cb14-19"></a>    b<span class="op">::</span><span class="dt">Number</span>, </span>
+<span id="cb14-20"><a href="#cb14-20"></a>    n<span class="op">::</span><span class="dt">Integer</span>)</span>
+<span id="cb14-21"><a href="#cb14-21"></a>    </span>
+<span id="cb14-22"><a href="#cb14-22"></a>    <span class="pp">@assert</span> n <span class="op">%</span><span class="fl">2</span> <span class="op">==</span> <span class="fl">1</span></span>
+<span id="cb14-23"><a href="#cb14-23"></a>    a, b <span class="op">=</span> <span class="fu">minmax</span>(a, b)</span>
+<span id="cb14-24"><a href="#cb14-24"></a>    h <span class="op">=</span> (b<span class="op">-</span>a)<span class="op">/</span>(n<span class="op">-</span><span class="fl">1</span>)</span>
+<span id="cb14-25"><a href="#cb14-25"></a>    x <span class="op">=</span> <span class="fu">range</span>(a, b, length <span class="op">=</span> n)</span>
+<span id="cb14-26"><a href="#cb14-26"></a>    ff <span class="op">=</span> <span class="fu">f</span>.(x)</span>
+<span id="cb14-27"><a href="#cb14-27"></a>    result <span class="op">=</span> (ff[<span class="fl">1</span>]<span class="op">+</span>ff[<span class="kw">end</span>])</span>
+<span id="cb14-28"><a href="#cb14-28"></a>    result <span class="op">+=</span> <span class="fl">4</span><span class="fu">*sum</span>(ff[<span class="fl">2</span><span class="op">:</span><span class="fl">2</span><span class="op">:</span><span class="kw">end</span><span class="op">-</span><span class="fl">1</span>])</span>
+<span id="cb14-29"><a href="#cb14-29"></a>    result <span class="op">+=</span> <span class="fl">2</span><span class="fu">*sum</span>(ff[<span class="fl">3</span><span class="op">:</span><span class="fl">2</span><span class="op">:</span><span class="kw">end</span><span class="op">-</span><span class="fl">2</span>])</span>
+<span id="cb14-30"><a href="#cb14-30"></a>    <span class="cf">return</span> result <span class="op">*</span> h<span class="op">/</span><span class="fl">3</span></span>
+<span id="cb14-31"><a href="#cb14-31"></a><span class="kw">end</span></span>
+<span id="cb14-32"><a href="#cb14-32"></a></span>
+<span id="cb14-33"><a href="#cb14-33"></a><span class="kw">function</span> <span class="fu">integrate_simpson_3_8</span>(</span>
+<span id="cb14-34"><a href="#cb14-34"></a>    f<span class="op">::</span><span class="dt">Function</span>, </span>
+<span id="cb14-35"><a href="#cb14-35"></a>    a<span class="op">::</span><span class="dt">Number</span>, </span>
+<span id="cb14-36"><a href="#cb14-36"></a>    b<span class="op">::</span><span class="dt">Number</span>, </span>
+<span id="cb14-37"><a href="#cb14-37"></a>    n<span class="op">::</span><span class="dt">Integer</span>)</span>
+<span id="cb14-38"><a href="#cb14-38"></a>    </span>
+<span id="cb14-39"><a href="#cb14-39"></a>    <span class="pp">@assert</span> n <span class="op">%</span><span class="fl">3</span> <span class="op">==</span> <span class="fl">1</span></span>
+<span id="cb14-40"><a href="#cb14-40"></a>    a, b <span class="op">=</span> <span class="fu">minmax</span>(a, b)</span>
+<span id="cb14-41"><a href="#cb14-41"></a>    h <span class="op">=</span> (b<span class="op">-</span>a)<span class="op">/</span>(n<span class="op">-</span><span class="fl">1</span>)</span>
+<span id="cb14-42"><a href="#cb14-42"></a>    x <span class="op">=</span> <span class="fu">range</span>(a, b, length <span class="op">=</span> n)</span>
+<span id="cb14-43"><a href="#cb14-43"></a>    <span class="fu">println</span>(<span class="st">"h=</span><span class="sc">$</span>h<span class="st">, dx=</span><span class="sc">$</span>(x[<span class="fl">10</span>]<span class="op">-</span>x[<span class="fl">9</span>])<span class="st">"</span>)</span>
+<span id="cb14-44"><a href="#cb14-44"></a>    ff <span class="op">=</span> <span class="fu">f</span>.(x)</span>
+<span id="cb14-45"><a href="#cb14-45"></a>    result <span class="op">=</span> (ff[<span class="fl">1</span>]<span class="op">+</span>ff[<span class="kw">end</span>])</span>
+<span id="cb14-46"><a href="#cb14-46"></a>    result <span class="op">+=</span> <span class="fl">3</span><span class="fu">*sum</span>(ff[<span class="fl">2</span><span class="op">:</span><span class="fl">3</span><span class="op">:</span><span class="kw">end</span><span class="op">-</span><span class="fl">2</span>])</span>
+<span id="cb14-47"><a href="#cb14-47"></a>    result <span class="op">+=</span> <span class="fl">3</span><span class="fu">*sum</span>(ff[<span class="fl">3</span><span class="op">:</span><span class="fl">3</span><span class="op">:</span><span class="kw">end</span><span class="op">-</span><span class="fl">1</span>])</span>
+<span id="cb14-48"><a href="#cb14-48"></a>    result <span class="op">+=</span> <span class="fl">2</span><span class="fu">*sum</span>(ff[<span class="fl">4</span><span class="op">:</span><span class="fl">3</span><span class="op">:</span><span class="kw">end</span><span class="op">-</span><span class="fl">3</span>])</span>
+<span id="cb14-49"><a href="#cb14-49"></a>    <span class="cf">return</span> result <span class="op">*</span> h <span class="op">*</span> <span class="fl">3</span> <span class="op">/</span> <span class="fl">8</span></span>
+<span id="cb14-50"><a href="#cb14-50"></a><span class="kw">end</span></span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p><br></p>
 </section>
 </section>
@@ -973,12 +1073,12 @@ f(x) = L_4 (x) + \dfrac{f^{(4)}(\xi_i)}{4!}\prod_{j=1}^4(x-x_{j-2})
 <p>어떤 값 <span class="math inline">\(M\)</span> 을 계산하는데 매개변수 <span class="math inline">\(h\)</span> 에 대해 그 truncation 오차가 <span class="math inline">\(O(h)\)</span> 인 방법을 사용하여 <span class="math inline">\(N_1(h)\)</span> 를 얻었다고 하자. 이 때 우리는</p>
 <p><span id="eq-richardson_1"><span class="math display">\[
 M - N_1(h) = k_1 h + k_2 h^2 + O(h^3)
-\tag{20}\]</span></span></p>
+\tag{23}\]</span></span></p>
 <p>라고 생각 할 수 있다. 이것을 약간 변형하면,</p>
 <p><span id="eq-richardson_2"><span class="math display">\[
 M-N_1\left(\dfrac{h}{2}\right) = k_1 \dfrac{h}{2} + k_2 \dfrac{h^2}{4} + O(h^3)
-\tag{21}\]</span></span></p>
-<p>이며 <span class="math inline">\(2\times\)</span>(<a href="#eq-richardson_2" class="quarto-xref">식&nbsp;21</a>)<span class="math inline">\(-\)</span>(<a href="#eq-richardson_1" class="quarto-xref">식&nbsp;20</a>) 를 계산하면,</p>
+\tag{24}\]</span></span></p>
+<p>이며 <span class="math inline">\(2\times\)</span>(<a href="#eq-richardson_2" class="quarto-xref">식&nbsp;24</a>)<span class="math inline">\(-\)</span>(<a href="#eq-richardson_1" class="quarto-xref">식&nbsp;23</a>) 를 계산하면,</p>
 <p><span class="math display">\[
 \begin{aligned}
 M&amp;=\left[2N_1\left(\dfrac{h}{2}\right) - N_1(h) \right] - k_2 \dfrac{h^2}{2} + O(h^3) = N_2(h) + O(h^2) \\
@@ -1014,7 +1114,7 @@ M - N_m\left(\dfrac{h}{2}\right) &amp; = k_m \left(\dfrac{h}{2}\right)^m + k_{m+
 M &amp;= \dfrac{1}{2^m-1}\left[ 2^m N_m \left(\dfrac{h}{2}\right)-N_m (h)\right] - \dfrac{k_{m+1}}{2(2^m-1)}h^{m+1} + O(h^{m+2}) \\
 &amp;= N_{m+1}(h) + O(h^{m+1})
 \end{aligned}
-\tag{22}\]</span></span></p>
+\tag{25}\]</span></span></p>
 <p>을 얻는다.</p>
 <p><br></p>
 <section id="sec-richardson_extrapolation_with_even_order_error" class="level4">
@@ -1039,7 +1139,7 @@ M &amp;= \dfrac{1}{4^{m} -1} \left[4^{m}N_{2m} \left(\dfrac{h}{2}\right) - N_{2m
 <p>를 얻는다. 즉</p>
 <p><span id="eq-richardson_even_order"><span class="math display">\[
 N_{2m+2}(h) =  \dfrac{1}{4^{m} -1} \left[4^{m}N_{2m} \left(\dfrac{h}{2}\right) - N_{2m}(h)\right]
-\tag{23}\]</span></span></p>
+\tag{26}\]</span></span></p>
 <p>를 얻는다.</p>
 <p><br></p>
 </section>
@@ -1060,23 +1160,23 @@ N_{2m+2}(h) =  \dfrac{1}{4^{m} -1} \left[4^{m}N_{2m} \left(\dfrac{h}{2}\right) -
 </div>
 </div>
 <p>앞서 사다리꼴 방법을 통해 <span class="math inline">\(O(h^2)\)</span> 의 오차를 갖는 함수 <span class="math inline">\(f\)</span> 의 적분값을 얻었다. 이것을 <a href="../../src/numerical_analysis_using_julia/06_calculus_of_one_variable_function.html#sec-richardson_extrapolation_with_even_order_error">짝수승 오차의 리차드슨 외삽법</a>과 결합하면 <span class="math inline">\(O(h^4)\)</span> 의 오차를 갖는 적분값을 계산 할 수 있을 것이다.</p>
-<p><a href="#eq-trapzoidal_value" class="quarto-xref">식&nbsp;16</a> 의 사다리꼴 적분 <span class="math inline">\(I_T[f, a, b, n]\)</span> 에서 <span class="math inline">\(n\)</span> 을 <span class="math inline">\(2^k\)</span> 로 잡았을 때의 적분을 <span class="math inline">\(N_{k, 1}\)</span> 이라고 하자. 즉,</p>
+<p><a href="#eq-trapzoidal_value" class="quarto-xref">식&nbsp;19</a> 의 사다리꼴 적분 <span class="math inline">\(I_T[f, a, b, n]\)</span> 에서 <span class="math inline">\(n\)</span> 을 <span class="math inline">\(2^k\)</span> 로 잡았을 때의 적분을 <span class="math inline">\(N_{k, 1}\)</span> 이라고 하자. 즉,</p>
 <p><span id="eq-trapzoidal_value2"><span class="math display">\[
 N_{k, 1} = I_T[f, a, b, 2^k] = \dfrac{h}{2}\left(f(x_1)+ f(x_{2^k}) + \sum_{i=2}^{2^k-1} f(x_i)\right)
-\tag{24}\]</span></span></p>
-<p>이라고 하자. 이 때의 오차는 <span class="math inline">\(O(h^2)\)</span> 이다. <span class="math inline">\(k=1,\ldots, k_M\)</span> 에 대해 <span class="math inline">\(N_{k, 1}\)</span> 을 구할 수 있다. <span class="math inline">\(m\le k_M-1\)</span> 에 대해 <span class="math inline">\(N_{1, m}, \ldots, N_{k_M-m+1, m}\)</span> 의 값을 구하였다고 하자. <a href="#eq-richardson_even_order" class="quarto-xref">식&nbsp;23</a> 를 이용하여, <span class="math inline">\(O(h^{2m+2})\)</span> 의 오차를 갖는 <span class="math inline">\(2^k-1\)</span> 개의 구간을 갖는 적분 <span class="math inline">\(N_{k, m+1}\)</span> 은 <span class="math display">\[
+\tag{27}\]</span></span></p>
+<p>이라고 하자. 이 때의 오차는 <span class="math inline">\(O(h^2)\)</span> 이다. <span class="math inline">\(k=1,\ldots, k_M\)</span> 에 대해 <span class="math inline">\(N_{k, 1}\)</span> 을 구할 수 있다. <span class="math inline">\(m\le k_M-1\)</span> 에 대해 <span class="math inline">\(N_{1, m}, \ldots, N_{k_M-m+1, m}\)</span> 의 값을 구하였다고 하자. <a href="#eq-richardson_even_order" class="quarto-xref">식&nbsp;26</a> 를 이용하여, <span class="math inline">\(O(h^{2m+2})\)</span> 의 오차를 갖는 <span class="math inline">\(2^k-1\)</span> 개의 구간을 갖는 적분 <span class="math inline">\(N_{k, m+1}\)</span> 은 <span class="math display">\[
 N_{k, m+1} = \dfrac{1}{4^{m} -1} \left[4^{m}N_{k+1, m}  - N_{k, m}\right] + O(h^{2m+2}), \qquad k = 1, \ldots k_M-m+1
 \]</span></p>
 <p>를 통해 얻을 수 있다.</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">rhomberg</span>(f<span class="op">::</span><span class="dt">Function</span>, a<span class="op">::</span><span class="dt">Number</span>, b<span class="op">::</span><span class="dt">Number</span>, order<span class="op">::</span><span class="dt">Integer </span><span class="op">=</span> <span class="fl">4</span>)</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="pp">@assert</span> order <span class="op">&gt;</span> <span class="fl">2</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    N <span class="op">=</span> <span class="fu">zeros</span>(order, order) </span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    N[<span class="op">:</span>, <span class="fl">1</span>]<span class="op">=</span> [<span class="fu">integrate_trapzoidal</span>(f, a, b, <span class="fl">2</span><span class="op">^</span>k) for k <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span>order]</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> m <span class="op">=</span> <span class="fl">1</span><span class="op">:</span>order, k <span class="op">=</span> <span class="fl">1</span><span class="op">:</span>order<span class="op">-</span>m</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        N[k, m<span class="op">+</span><span class="fl">1</span>] <span class="op">=</span> <span class="fl">1.0</span><span class="op">/</span>(<span class="fl">4</span><span class="op">^</span>m<span class="op">-</span><span class="fl">1.0</span>) <span class="fu">*</span>(<span class="fl">4</span><span class="op">^</span>m <span class="op">*</span> N[k<span class="op">+</span><span class="fl">1</span>, m]<span class="op">-</span> N[k, m]) </span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> N[<span class="fl">1</span>, <span class="kw">end</span>]</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">rhomberg</span>(f<span class="op">::</span><span class="dt">Function</span>, a<span class="op">::</span><span class="dt">Number</span>, b<span class="op">::</span><span class="dt">Number</span>, order<span class="op">::</span><span class="dt">Integer </span><span class="op">=</span> <span class="fl">4</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="pp">@assert</span> order <span class="op">&gt;</span> <span class="fl">2</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    N <span class="op">=</span> <span class="fu">zeros</span>(order, order) </span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    N[<span class="op">:</span>, <span class="fl">1</span>]<span class="op">=</span> [<span class="fu">integrate_trapzoidal</span>(f, a, b, <span class="fl">2</span><span class="op">^</span>k) for k <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span>order]</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> m <span class="op">=</span> <span class="fl">1</span><span class="op">:</span>order, k <span class="op">=</span> <span class="fl">1</span><span class="op">:</span>order<span class="op">-</span>m</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>        N[k, m<span class="op">+</span><span class="fl">1</span>] <span class="op">=</span> <span class="fl">1.0</span><span class="op">/</span>(<span class="fl">4</span><span class="op">^</span>m<span class="op">-</span><span class="fl">1.0</span>) <span class="fu">*</span>(<span class="fl">4</span><span class="op">^</span>m <span class="op">*</span> N[k<span class="op">+</span><span class="fl">1</span>, m]<span class="op">-</span> N[k, m]) </span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> N[<span class="fl">1</span>, <span class="kw">end</span>]</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>함수 <span class="math inline">\(f(x)\)</span> 를 <span class="math inline">\([a,\,b]\)</span> 구간에서 <span class="math inline">\(n=2^{k_{M}}-1\)</span> 개의 구간, 즉 <span class="math inline">\(a=x_1 &lt; \cdots &lt; x_n=b\)</span> 의 구간에서의 사다리꼴 적분을 수행했다면 <span class="math inline">\(h= \dfrac{b-a}{n-1}\)</span> 에 대해 <span class="math inline">\(O(h^2)\)</span> 의 정확도를 갖는 적분이지만 롬버그 적분을 통해 <span class="math inline">\(O(h^{2{k_M}+2})\)</span> 의 정확도를 갖는 적분값을 구할 수 있다. 더구나. 실제로 계산하는 함수값의 갯수는 <span class="math inline">\(n\)</span> 개이며 나머지는 이미 계산된 값들에 대한 단순한 사칙연산이므로 훨씬 빠르게 계산 할 수 있다.</p>
 <p>예를 들어 우리는 <span class="math inline">\(\displaystyle \int_0^1 \sqrt{x}\, dx=\frac{2}{3}\)</span> 임을 안다. 롬버그 적분을 통해 <span class="math inline">\(k_M=4\)</span> 으로 계산한 결과는 <span class="math inline">\(0.665693\)</span> 이며 이것보보다 오차가 작은 사다리꼴 적분을 얻기 위해서는 구간을 35개의 구간으로, 즉 <span class="math inline">\(x_1=0,\, x_{36}=1\)</span> 로 나누어야 한다.</p>
 <p><br></p>
@@ -1093,7 +1193,7 @@ N_{k, m+1} = \dfrac{1}{4^{m} -1} \left[4^{m}N_{k+1, m}  - N_{k, m}\right] + O(h^
 <p>본격적으로 들어가기 전에 이미 미적분학에서 배웠을 한가지를 확인하고 가자. 우리는 임의의 구간 <span class="math inline">\([a,\,b]\)</span> 에 대한 함수 <span class="math inline">\(f(x)\)</span> 의 적분을 <span class="math inline">\([-1,\,1]\)</span> 구간에 대한 적분으로 바꿀 수 있다. 즉,</p>
 <p><span id="eq-integra_variable_transform"><span class="math display">\[
 \int_{a}^b f(x)\, dx = \int_{-1}^1 f\left(\dfrac{(b-a)t+ (b+a)}{2}\right)\,\left(\dfrac{b-a}{2}\right) dt
-\tag{25}\]</span></span></p>
+\tag{28}\]</span></span></p>
 <p>이다. 따라서 <span class="math inline">\([-1,\,1]\)</span> 구간에서의 수치해석적 적분을 잘 정한다면 임의의 구간에서의 적분도 잘 계산 할 수 있다.</p>
 <p><br></p>
 <section id="르장드르-다항식을-이용한-가우스-구적법" class="level3" data-number="5.1">
@@ -1294,8 +1394,8 @@ p(x_i) = r(x_i)
 </tbody>
 </table>
 <p>르장드르 함수를 이용한 가우스 구적법은 <code>NAJ.jl</code> 의 <code>integrate_gauss_quadrature</code> 함수로 구현되었다. 위의 테이블을 이용하여 쉽게 구한다. 간단한 예로 함수 <span class="math inline">\(f(x)=x^4\)</span> 의 <span class="math inline">\([0,\,1]\)</span> 구간에서의 적분을 <span class="math inline">\(n=3\)</span> 에서 구하는 방법은 아래와 같다. 답은 0.2 가 정확히 나온다.</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">NAJ</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">integrate_gauss_quadrature</span>(x<span class="op">-&gt;</span>x<span class="op">^</span><span class="fl">4</span>, <span class="fl">3</span>, <span class="fl">0</span>, <span class="fl">1</span>)</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">NAJ</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">integrate_gauss_quadrature</span>(x<span class="op">-&gt;</span>x<span class="op">^</span><span class="fl">4</span>, <span class="fl">3</span>, <span class="fl">0</span>, <span class="fl">1</span>)</span></code><button title="클립보드 복사" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>르장드르 함수를 이용한 가우스 구적법은 적분하고자 하는 함수가 매끄럽고 적분 구간에서 발산하지 않을 때 사용할 수 있다.</p>
 
 
