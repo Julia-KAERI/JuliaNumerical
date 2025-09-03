@@ -14,30 +14,8 @@ $$
 
 로 주어진다. 
 
-```{r, engine = 'tikz'}
-#| label: fig-bezier_1
-#| code-fold: true
-#| output: asis
-#| fig-width: 2
-#| fig-align: center
-#| fig-cap: "이차 베지에 곡선"
-\usetikzlibrary{calc}
-\tikzset{
-  quadratic/.style={
-    to path={
-      (\tikztostart) .. controls
-      ($#1!1/3!(\tikztostart)$) and ($#1!1/3!(\tikztotarget)$)
-      .. (\tikztotarget)
-    }
-  }
-}
-\begin{tikzpicture}[scale=1.0]
-\filldraw [black] (-2, 2) circle (2pt) node[anchor=south] {$P_1$};;
-\filldraw [black] (2, 2) circle (2pt) node[anchor=south] {$P_2$};
-\filldraw [blue] (0,0) circle (2pt)node[anchor=north, black] {$C$};
-\draw[blue,very thick] (-2, 2) to[quadratic={(0, 0)}] (2, 2);
-\end{tikzpicture}
-```
+![이차 베지에 곡선](figure/fig_bezier_1.png){#fig-bezier width=200}
+
 
 ::: {.callout-tip appearance="simple" icon="false"}
 
@@ -57,7 +35,7 @@ $$
 
 이다. 
 
-```{r, engine = 'tikz'}
+<!-- ```{r, engine = 'tikz'}
 #| label: fig-bezier_2
 #| code-fold: true
 #| output: asis
@@ -84,7 +62,9 @@ $$
 \draw[magenta, very thick] (-2,2) .. controls (-1,0) and (1,0) .. (2,2);
 \end{tikzpicture}
 ```
+ -->
 
+![사차 베지에 곡선](figure/fig_bezier_4th.png){#fig-bezier_2 width=200}
 
 </br>
 
